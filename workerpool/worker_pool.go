@@ -40,18 +40,18 @@ func NewWorkerPool(numWorkers int, bufferSize int) *workerPool {
 }
 
 func (wp *workerPool) Start(ctx context.Context) {
-    for i := 0; i < wp.numWorkers; i++ {
-        wp.wg.Add(1)
-        go func() {
-            wp.run(ctx)
-            wp.wg.Done()
-        }()
-    }
+	for i := 0; i < wp.numWorkers; i++ {
+		wp.wg.Add(1)
+		go func() {
+			wp.run(ctx)
+			wp.wg.Done()
+		}()
+	}
 
-    // Wait for all workers to finish
-    wp.wg.Wait()
-    // Close the results channel as no more results will be sent
-    close(wp.results)
+	// Wait for all workers to finish
+	wp.wg.Wait()
+	// Close the results channel as no more results will be sent
+	close(wp.results)
 }
 
 func (wp *workerPool) Tasks() chan *Task {
@@ -63,25 +63,18 @@ func (wp *workerPool) Results() chan *Result {
 }
 
 func (wp *workerPool) run(ctx context.Context) {
-    for {
-        select {
-        case task, ok := <-wp.tasks:
-            if !ok {
-                // Task channel is closed, return from this worker
-                return
-            }
-            // Execute the task and send the result to the results channel
-            result := task.Func(task.Args...)
-            select {
-            case wp.results <- result:
-                // Result sent successfully
-            case <-ctx.Done():
-                // Context was cancelled, return without sending the result
-                return
-            }
-        case <-ctx.Done():
-            // Context was cancelled, return from this worker
-            return
-        }
-    }
+	// TODO: implementation
+	//
+	// Keeps fetching task from the task channel, do the task,
+	// then makes sure to exit if context is done.
+
+	defer ctx.Done()
+	for task := range wp.Tasks() {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			wp.Results() <- task.Func(task.Args...)
+		}
+	}
 }
